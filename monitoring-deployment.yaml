@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-demo
+  namespace: default
+  labels:
+    app: monitoring-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: monitoring-demo
+  template:
+    metadata:
+      labels:
+        app: monitoring-demo
+        #annotations:
+        # Prometheus 스크랩 설정
+        # prometheus.io/scrape: "true"
+        # prometheus.io/port: "8080"
+        # prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: monitoring-demo
+          image: jyoungmin/monitoring-t:latest
+          ports:
+            - containerPort: 8080
+              name: http
+
+          # ENV
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+
+          # Health Checks
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+
+          # Resources
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
